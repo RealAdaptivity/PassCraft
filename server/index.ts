@@ -53,6 +53,6 @@ app.post('/api/sign-pass', async (req, res) => {
 });
 
 app.listen(Number(PORT), HOST, () => {
-  console.log(`🚀 PassCraft Signing Server running on http://${HOST}:${PORT}`);
-  console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Loaded' : '⚠️ Missing'}`);
+  console.log(`🚀 PassCraft Signing Server started on ${HOST}:${PORT}`);
+  console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Certificates Present' : '⚠️ Certificates Missing'}`);
 });

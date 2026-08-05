@@ -17190,7 +17190,7 @@ var require_get_intrinsic = __commonJS({
     var throwTypeError = function() {
       throw new $TypeError();
     };
-    var ThrowTypeError = $gOPD ? function() {
+    var ThrowTypeError = $gOPD ? (function() {
       try {
         arguments.callee;
         return throwTypeError;
@@ -17201,7 +17201,7 @@ var require_get_intrinsic = __commonJS({
           return throwTypeError;
         }
       }
-    }() : throwTypeError;
+    })() : throwTypeError;
     var hasSymbols = require_has_symbols()();
     var getProto = require_get_proto();
     var $ObjectGPO = require_Object_getPrototypeOf();
@@ -17465,7 +17465,7 @@ var require_get_intrinsic = __commonJS({
             if (!allowMissing) {
               throw new $TypeError("base intrinsic for " + name + " exists, but the property is not available.");
             }
-            return void 0;
+            return void undefined2;
           }
           if ($gOPD && i + 1 >= parts.length) {
             var desc = $gOPD(value, part);
@@ -17730,13 +17730,13 @@ var require_utils2 = __commonJS({
     var setMaxIndex = function setMaxIndex2(obj, maxIndex) {
       overflowChannel.set(obj, maxIndex);
     };
-    var hexTable = function() {
+    var hexTable = (function() {
       var array = [];
       for (var i = 0; i < 256; ++i) {
         array[array.length] = "%" + ((i < 16 ? "0" : "") + i.toString(16)).toUpperCase();
       }
       return array;
-    }();
+    })();
     var compactQueue = function compactQueue2(queue) {
       while (queue.length > 1) {
         var item = queue.pop();
@@ -18879,11 +18879,17 @@ var require_parseurl = __commonJS({
             }
             break;
           case 9:
+          /* \t */
           case 10:
+          /* \n */
           case 12:
+          /* \f */
           case 13:
+          /* \r */
           case 32:
+          /*    */
           case 35:
+          /* #  */
           case 160:
           case 65279:
             return parse(str);
@@ -19371,7 +19377,7 @@ var require_ipaddr = __commonJS({
         }
         return defaultName;
       };
-      ipaddr.IPv4 = function() {
+      ipaddr.IPv4 = (function() {
         function IPv4(octets) {
           var k, len, octet;
           if (octets.length !== 4) {
@@ -19456,7 +19462,7 @@ var require_ipaddr = __commonJS({
           return 32 - cidr;
         };
         return IPv4;
-      }();
+      })();
       ipv4Part = "(0?\\d+|0x[a-f0-9]+)";
       ipv4Regexes = {
         fourOctet: new RegExp("^" + ipv4Part + "\\." + ipv4Part + "\\." + ipv4Part + "\\." + ipv4Part + "$", "i"),
@@ -19472,7 +19478,7 @@ var require_ipaddr = __commonJS({
           }
         };
         if (match = string.match(ipv4Regexes.fourOctet)) {
-          return function() {
+          return (function() {
             var k, len, ref, results;
             ref = match.slice(1, 6);
             results = [];
@@ -19481,25 +19487,25 @@ var require_ipaddr = __commonJS({
               results.push(parseIntAuto(part));
             }
             return results;
-          }();
+          })();
         } else if (match = string.match(ipv4Regexes.longValue)) {
           value = parseIntAuto(match[1]);
           if (value > 4294967295 || value < 0) {
             throw new Error("ipaddr: address outside defined range");
           }
-          return function() {
+          return (function() {
             var k, results;
             results = [];
             for (shift = k = 0; k <= 24; shift = k += 8) {
               results.push(value >> shift & 255);
             }
             return results;
-          }().reverse();
+          })().reverse();
         } else {
           return null;
         }
       };
-      ipaddr.IPv6 = function() {
+      ipaddr.IPv6 = (function() {
         function IPv6(parts, zoneId) {
           var i, k, l, len, part, ref;
           if (parts.length === 16) {
@@ -19559,7 +19565,7 @@ var require_ipaddr = __commonJS({
         };
         IPv6.prototype.toNormalizedString = function() {
           var addr, part, suffix;
-          addr = function() {
+          addr = (function() {
             var k, len, ref, results;
             ref = this.parts;
             results = [];
@@ -19568,7 +19574,7 @@ var require_ipaddr = __commonJS({
               results.push(part.toString(16));
             }
             return results;
-          }.call(this).join(":");
+          }).call(this).join(":");
           suffix = "";
           if (this.zoneId) {
             suffix = "%" + this.zoneId;
@@ -19577,7 +19583,7 @@ var require_ipaddr = __commonJS({
         };
         IPv6.prototype.toFixedLengthString = function() {
           var addr, part, suffix;
-          addr = function() {
+          addr = (function() {
             var k, len, ref, results;
             ref = this.parts;
             results = [];
@@ -19586,7 +19592,7 @@ var require_ipaddr = __commonJS({
               results.push(part.toString(16).padStart(4, "0"));
             }
             return results;
-          }.call(this).join(":");
+          }).call(this).join(":");
           suffix = "";
           if (this.zoneId) {
             suffix = "%" + this.zoneId;
@@ -19671,7 +19677,7 @@ var require_ipaddr = __commonJS({
           return 128 - cidr;
         };
         return IPv6;
-      }();
+      })();
       ipv6Part = "(?:[0-9a-f]+::?)+";
       zoneIndex = "%[0-9a-z]{1,}";
       ipv6Regexes = {
@@ -19715,7 +19721,7 @@ var require_ipaddr = __commonJS({
         if (string[string.length - 1] === ":") {
           string = string.slice(0, -1);
         }
-        parts = function() {
+        parts = (function() {
           var k, len, ref, results;
           ref = string.split(":");
           results = [];
@@ -19724,7 +19730,7 @@ var require_ipaddr = __commonJS({
             results.push(parseInt(part, 16));
           }
           return results;
-        }();
+        })();
         return {
           parts,
           zoneId
@@ -23523,6 +23529,7 @@ var require_response = __commonJS({
       var type;
       var app2 = this.app;
       switch (typeof chunk) {
+        // string defaulting to html
         case "string":
           if (!this.get("Content-Type")) {
             this.type("html");
@@ -23924,6 +23931,7 @@ var require_response = __commonJS({
               return "\\u003e";
             case 38:
               return "\\u0026";
+            /* istanbul ignore next: unreachable default */
             default:
               return c;
           }
@@ -24567,7 +24575,7 @@ var require_BufferList = __commonJS({
     function copyBuffer(src, target, offset) {
       src.copy(target, offset);
     }
-    module2.exports = function() {
+    module2.exports = (function() {
       function BufferList() {
         _classCallCheck(this, BufferList);
         this.head = null;
@@ -24621,7 +24629,7 @@ var require_BufferList = __commonJS({
         return ret;
       };
       return BufferList;
-    }();
+    })();
     if (util && util.inspect && util.inspect.custom) {
       module2.exports.prototype[util.inspect.custom] = function() {
         var obj = util.inspect({ length: this.length });
@@ -26015,11 +26023,11 @@ var require_stream_readable = __commonJS({
       });
       for (var i in stream) {
         if (this[i] === void 0 && typeof stream[i] === "function") {
-          this[i] = /* @__PURE__ */ function(method) {
+          this[i] = /* @__PURE__ */ (function(method) {
             return function() {
               return stream[method].apply(stream, arguments);
             };
-          }(i);
+          })(i);
         }
       }
       for (var n = 0; n < kProxyEvents.length; n++) {
@@ -27060,23 +27068,23 @@ var require_utils4 = __commonJS({
         /**
          * true if the browser accepts to use String.fromCharCode on Uint8Array
          */
-        uint8array: function() {
+        uint8array: (function() {
           try {
             return support.uint8array && String.fromCharCode.apply(null, new Uint8Array(1)).length === 1;
           } catch (e) {
             return false;
           }
-        }(),
+        })(),
         /**
          * true if the browser accepts to use String.fromCharCode on nodejs Buffer.
          */
-        nodebuffer: function() {
+        nodebuffer: (function() {
           try {
             return support.nodebuffer && String.fromCharCode.apply(null, nodejsUtils.allocBuffer(1)).length === 1;
           } catch (e) {
             return false;
           }
-        }()
+        })()
       }
     };
     function arrayLikeToString(array) {
@@ -31391,6 +31399,7 @@ var require_inflate = __commonJS({
               hold = 0;
               bits = 0;
               state.mode = TIME;
+            /* falls through */
             case TIME:
               while (bits < 32) {
                 if (have === 0) {
@@ -31413,6 +31422,7 @@ var require_inflate = __commonJS({
               hold = 0;
               bits = 0;
               state.mode = OS;
+            /* falls through */
             case OS:
               while (bits < 16) {
                 if (have === 0) {
@@ -31434,6 +31444,7 @@ var require_inflate = __commonJS({
               hold = 0;
               bits = 0;
               state.mode = EXLEN;
+            /* falls through */
             case EXLEN:
               if (state.flags & 1024) {
                 while (bits < 16) {
@@ -31459,6 +31470,7 @@ var require_inflate = __commonJS({
                 state.head.extra = null;
               }
               state.mode = EXTRA;
+            /* falls through */
             case EXTRA:
               if (state.flags & 1024) {
                 copy = state.length;
@@ -31495,6 +31507,7 @@ var require_inflate = __commonJS({
               }
               state.length = 0;
               state.mode = NAME;
+            /* falls through */
             case NAME:
               if (state.flags & 2048) {
                 if (have === 0) {
@@ -31520,6 +31533,7 @@ var require_inflate = __commonJS({
               }
               state.length = 0;
               state.mode = COMMENT;
+            /* falls through */
             case COMMENT:
               if (state.flags & 4096) {
                 if (have === 0) {
@@ -31544,6 +31558,7 @@ var require_inflate = __commonJS({
                 state.head.comment = null;
               }
               state.mode = HCRC;
+            /* falls through */
             case HCRC:
               if (state.flags & 512) {
                 while (bits < 16) {
@@ -31582,6 +31597,7 @@ var require_inflate = __commonJS({
               hold = 0;
               bits = 0;
               state.mode = DICT;
+            /* falls through */
             case DICT:
               if (state.havedict === 0) {
                 strm.next_out = put;
@@ -31594,10 +31610,12 @@ var require_inflate = __commonJS({
               }
               strm.adler = state.check = 1;
               state.mode = TYPE;
+            /* falls through */
             case TYPE:
               if (flush === Z_BLOCK || flush === Z_TREES) {
                 break inf_leave;
               }
+            /* falls through */
             case TYPEDO:
               if (state.last) {
                 hold >>>= bits & 7;
@@ -31662,8 +31680,10 @@ var require_inflate = __commonJS({
               if (flush === Z_TREES) {
                 break inf_leave;
               }
+            /* falls through */
             case COPY_:
               state.mode = COPY;
+            /* falls through */
             case COPY:
               copy = state.length;
               if (copy) {
@@ -31711,6 +31731,7 @@ var require_inflate = __commonJS({
               }
               state.have = 0;
               state.mode = LENLENS;
+            /* falls through */
             case LENLENS:
               while (state.have < state.ncode) {
                 while (bits < 3) {
@@ -31740,6 +31761,7 @@ var require_inflate = __commonJS({
               }
               state.have = 0;
               state.mode = CODELENS;
+            /* falls through */
             case CODELENS:
               while (state.have < state.nlen + state.ndist) {
                 for (; ; ) {
@@ -31857,8 +31879,10 @@ var require_inflate = __commonJS({
               if (flush === Z_TREES) {
                 break inf_leave;
               }
+            /* falls through */
             case LEN_:
               state.mode = LEN;
+            /* falls through */
             case LEN:
               if (have >= 6 && left >= 258) {
                 strm.next_out = put;
@@ -31940,6 +31964,7 @@ var require_inflate = __commonJS({
               }
               state.extra = here_op & 15;
               state.mode = LENEXT;
+            /* falls through */
             case LENEXT:
               if (state.extra) {
                 n = state.extra;
@@ -31958,6 +31983,7 @@ var require_inflate = __commonJS({
               }
               state.was = state.length;
               state.mode = DIST;
+            /* falls through */
             case DIST:
               for (; ; ) {
                 here = state.distcode[hold & (1 << state.distbits) - 1];
@@ -32008,6 +32034,7 @@ var require_inflate = __commonJS({
               state.offset = here_val;
               state.extra = here_op & 15;
               state.mode = DISTEXT;
+            /* falls through */
             case DISTEXT:
               if (state.extra) {
                 n = state.extra;
@@ -32030,6 +32057,7 @@ var require_inflate = __commonJS({
                 break;
               }
               state.mode = MATCH;
+            /* falls through */
             case MATCH:
               if (left === 0) {
                 break inf_leave;
@@ -32106,6 +32134,7 @@ var require_inflate = __commonJS({
                 bits = 0;
               }
               state.mode = LENGTH;
+            /* falls through */
             case LENGTH:
               if (state.wrap && state.flags) {
                 while (bits < 32) {
@@ -32125,6 +32154,7 @@ var require_inflate = __commonJS({
                 bits = 0;
               }
               state.mode = DONE;
+            /* falls through */
             case DONE:
               ret = Z_STREAM_END;
               break inf_leave;
@@ -32134,6 +32164,7 @@ var require_inflate = __commonJS({
             case MEM:
               return Z_MEM_ERROR;
             case SYNC:
+            /* falls through */
             default:
               return Z_STREAM_ERROR;
           }
@@ -34174,8 +34205,8 @@ app.post("/api/sign-pass", async (req, res) => {
   }
 });
 app.listen(Number(PORT), HOST, () => {
-  console.log(`\u{1F680} PassCraft Signing Server running on http://${HOST}:${PORT}`);
-  console.log(`\u{1F4CB} Cert status: ${isCertificatesAvailable() ? "\u2705 Loaded" : "\u26A0\uFE0F Missing"}`);
+  console.log(`\u{1F680} PassCraft Signing Server started on ${HOST}:${PORT}`);
+  console.log(`\u{1F4CB} Cert status: ${isCertificatesAvailable() ? "\u2705 Certificates Present" : "\u26A0\uFE0F Certificates Missing"}`);
 });
 /*! Bundled license information:
 
@@ -34248,6 +34279,8 @@ on-finished/index.js:
    *)
 
 content-type/dist/index.js:
+content-type/dist/index.js:
+content-type/index.js:
   (*!
    * content-type
    * Copyright(c) 2015 Douglas Christopher Wilson
@@ -34285,14 +34318,10 @@ type-is/index.js:
    * MIT Licensed
    *)
 
-content-type/dist/index.js:
-  (*!
-   * content-type
-   * Copyright(c) 2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
 body-parser/lib/read.js:
+body-parser/lib/types/raw.js:
+body-parser/lib/types/text.js:
+body-parser/index.js:
   (*!
    * body-parser
    * Copyright(c) 2014-2015 Douglas Christopher Wilson
@@ -34300,38 +34329,10 @@ body-parser/lib/read.js:
    *)
 
 body-parser/lib/types/json.js:
-  (*!
-   * body-parser
-   * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-body-parser/lib/types/raw.js:
-  (*!
-   * body-parser
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-body-parser/lib/types/text.js:
-  (*!
-   * body-parser
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
 body-parser/lib/types/urlencoded.js:
   (*!
    * body-parser
    * Copyright(c) 2014 Jonathan Ong
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-body-parser/index.js:
-  (*!
-   * body-parser
    * Copyright(c) 2014-2015 Douglas Christopher Wilson
    * MIT Licensed
    *)
@@ -34368,18 +34369,15 @@ finalhandler/index.js:
    *)
 
 express/lib/view.js:
+express/lib/application.js:
+express/lib/request.js:
+express/lib/express.js:
+express/index.js:
   (*!
    * express
    * Copyright(c) 2009-2013 TJ Holowaychuk
    * Copyright(c) 2013 Roman Shtylman
    * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-content-type/index.js:
-  (*!
-   * content-type
-   * Copyright(c) 2015 Douglas Christopher Wilson
    * MIT Licensed
    *)
 
@@ -34405,6 +34403,7 @@ proxy-addr/index.js:
    *)
 
 express/lib/utils.js:
+express/lib/response.js:
   (*!
    * express
    * Copyright(c) 2009-2013 TJ Holowaychuk
@@ -34413,35 +34412,12 @@ express/lib/utils.js:
    *)
 
 router/lib/layer.js:
-  (*!
-   * router
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
 router/lib/route.js:
-  (*!
-   * router
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
 router/index.js:
   (*!
    * router
    * Copyright(c) 2013 Roman Shtylman
    * Copyright(c) 2014-2022 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-express/lib/application.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
    * MIT Licensed
    *)
 
@@ -34478,15 +34454,6 @@ range-parser/index.js:
    * MIT Licensed
    *)
 
-express/lib/request.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
 content-disposition/index.js:
   (*!
    * content-disposition
@@ -34517,38 +34484,12 @@ vary/index.js:
    * MIT Licensed
    *)
 
-express/lib/response.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
 serve-static/index.js:
   (*!
    * serve-static
    * Copyright(c) 2010 Sencha Inc.
    * Copyright(c) 2011 TJ Holowaychuk
    * Copyright(c) 2014-2016 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-express/lib/express.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
-   * MIT Licensed
-   *)
-
-express/index.js:
-  (*!
-   * express
-   * Copyright(c) 2009-2013 TJ Holowaychuk
-   * Copyright(c) 2013 Roman Shtylman
-   * Copyright(c) 2014-2015 Douglas Christopher Wilson
    * MIT Licensed
    *)
 
