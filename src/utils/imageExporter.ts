@@ -35,7 +35,14 @@ export async function downloadPassAsSvg(elementId: string, filename: string = 'a
   link.click();
 }
 
-export async function generateQrCodeDataUrl(text: string, options?: { color?: { dark?: string; light?: string }; width?: number }): Promise<string> {
+export async function generateQrCodeDataUrl(
+  text: string, 
+  options?: { 
+    color?: { dark?: string; light?: string }; 
+    width?: number;
+    errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+  }
+): Promise<string> {
   try {
     return await QRCode.toDataURL(text || 'https://passcraft.app', {
       width: options?.width || 300,
@@ -44,7 +51,7 @@ export async function generateQrCodeDataUrl(text: string, options?: { color?: { 
         dark: options?.color?.dark || '#000000',
         light: options?.color?.light || '#ffffff'
       },
-      errorCorrectionLevel: 'H'
+      errorCorrectionLevel: options?.errorCorrectionLevel || 'M'
     });
   } catch (err) {
     console.error('Error generating QR code:', err);

@@ -45,6 +45,7 @@ export interface ApplePassData {
     format: BarcodeFormat;
     altText?: string;
     messageEncoding: string;
+    errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
   };
 
   // Extra Boarding Pass metadata

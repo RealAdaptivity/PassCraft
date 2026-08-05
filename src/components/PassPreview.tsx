@@ -22,14 +22,15 @@ export const PassPreview: React.FC<PassPreviewProps> = ({
     let isMounted = true;
     generateQrCodeDataUrl(passData.barcode.message, {
       color: { dark: '#000000', light: '#ffffff' },
-      width: 250
+      width: 250,
+      errorCorrectionLevel: passData.barcode.errorCorrectionLevel || 'M'
     }).then(url => {
       if (isMounted) setQrCodeDataUrl(url);
     });
     return () => {
       isMounted = false;
     };
-  }, [passData.barcode.message, passData.barcode.format]);
+  }, [passData.barcode.message, passData.barcode.format, passData.barcode.errorCorrectionLevel]);
 
   return (
     <div className="preview-pane">

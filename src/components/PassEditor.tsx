@@ -385,6 +385,23 @@ export const PassEditor: React.FC<PassEditorProps> = ({ passData, onUpdatePass }
                 />
               </div>
             </div>
+
+            <div className="form-group">
+              <label className="form-label">QR Density / Error Correction Level</label>
+              <select 
+                className="form-select"
+                value={passData.barcode.errorCorrectionLevel || 'M'}
+                onChange={e => onUpdatePass({ barcode: { ...passData.barcode, errorCorrectionLevel: e.target.value as 'L' | 'M' | 'Q' | 'H' } })}
+              >
+                <option value="M">Medium (Standard - 15% recovery, matching DRB card grid)</option>
+                <option value="L">Low (1-2 Module Grid - 7% recovery)</option>
+                <option value="Q">Quartile (25% recovery)</option>
+                <option value="H">High (Dense Grid - 30% recovery)</option>
+              </select>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                Adjusts the physical pixel grid density of the QR code to match your DRB card version.
+              </span>
+            </div>
           </div>
         )}
 
