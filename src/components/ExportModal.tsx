@@ -28,7 +28,28 @@ export const ExportModal: React.FC<ExportModalProps> = ({ passData, onClose }) =
       const zipBlob = await generatePKPassZip(passData);
       const filename = `${passData.title.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'pass'}.pkpass`;
       
-      const url = URL.createObjectURL(zipBlob);
+      let finalBlob = zipBlob;
+
+      // Try server signing endpoint
+      try {
+        const response = await fetch('http://localhost:3001/api/sign-pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/zip' },
+          body: zipBlob
+        });
+
+        if (response.ok) {
+          finalBlob = await response.blob();
+          const isSigned = response.headers.get('X-Pass-Signed') === 'true';
+          if (isSigned) {
+            console.log('Pass signed by PassCraft server!');
+          }
+        }
+      } catch (e) {
+        console.log('Server signer offline, providing client-side bundle.', e);
+      }
+      
+      const url = URL.createObjectURL(finalBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
