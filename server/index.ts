@@ -18,6 +18,11 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.raw({ type: 'application/zip', limit: '10mb' }));
 
+// Root health check
+app.get('/', (_req, res) => {
+  res.json({ service: 'PassCraft Signing Server', status: 'online' });
+});
+
 // Health & Cert Status Endpoint
 app.get('/api/cert-status', (_req, res) => {
   const hasCerts = isCertificatesAvailable();
