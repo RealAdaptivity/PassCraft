@@ -28,47 +28,58 @@ export const ExportModal: React.FC<ExportModalProps> = ({ passData, onClose }) =
       const zipBlob = await generatePKPassZip(passData);
       const filename = `${passData.title.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'pass'}.pkpass`;
       
-      let finalBlob = zipBlob;
-
-      // Try server signing endpoint (Railway cloud or localhost)
       const signingServerUrl = import.meta.env.VITE_SIGNING_SERVER_URL || 'http://localhost:3001';
+      let directDownloadUrl: string | null = null;
+
       try {
-        const response = await fetch(`${signingServerUrl}/api/sign-pass`, {
+        const response = await fetch(`${signingServerUrl}/api/pass/create-link`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/zip' },
           body: zipBlob
         });
 
         if (response.ok) {
-          finalBlob = await response.blob();
-          const isSigned = response.headers.get('X-Pass-Signed') === 'true';
-          if (isSigned) {
-            console.log('Pass signed by PassCraft server!');
+          const data = await response.json();
+          if (data.downloadUrl) {
+            directDownloadUrl = data.downloadUrl;
           }
         }
       } catch (e) {
-        console.log('Server signer offline, providing client-side bundle.', e);
+        console.log('Server signer offline, fallback to client-side Blob.', e);
       }
-
-      // Create Blob URL with explicit Apple Wallet MIME type
-      const passBlob = new Blob([await finalBlob.arrayBuffer()], { type: 'application/vnd.apple.pkpass' });
-      const url = URL.createObjectURL(passBlob);
 
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        // On iOS Safari, navigating directly to the blob URL triggers native Apple Wallet preview
-        window.location.href = url;
+
+      if (directDownloadUrl) {
+        if (isIOS) {
+          // Direct HTTPS navigation on iOS Safari opens native Apple Wallet modal!
+          window.location.href = directDownloadUrl;
+        } else {
+          // Desktop download
+          const a = document.createElement('a');
+          a.href = directDownloadUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
       } else {
-        // Desktop / Android download
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        // Fallback to client-side blob if offline
+        const passBlob = new Blob([await zipBlob.arrayBuffer()], { type: 'application/vnd.apple.pkpass' });
+        const url = URL.createObjectURL(passBlob);
+        if (isIOS) {
+          window.location.href = url;
+        } else {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
       }
       
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
       fireConfetti();
     } catch (err) {
       console.error('Failed to export PKPass:', err);
@@ -77,6 +88,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ passData, onClose }) =
       setIsExporting(false);
     }
   };
+
 
   const handleDownloadPNG = async () => {
     try {

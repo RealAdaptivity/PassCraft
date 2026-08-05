@@ -19241,14 +19241,14 @@ var require_etag = __commonJS({
   "node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto = require("crypto");
+    var crypto2 = require("crypto");
     var Stats = require("fs").Stats;
     var toString = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash = crypto.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash = crypto2.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash + '"';
     }
@@ -22735,17 +22735,17 @@ var require_content_disposition = __commonJS({
 // node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "node_modules/cookie-signature/index.js"(exports2) {
-    var crypto = require("crypto");
+    var crypto2 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" != typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto2.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(input, secret) {
       if ("string" != typeof input) throw new TypeError("Signed cookie string must be provided.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
       var tentativeValue = input.slice(0, input.lastIndexOf(".")), expectedInput = exports2.sign(tentativeValue, secret), expectedBuffer = Buffer.from(expectedInput), inputBuffer = Buffer.from(input);
-      return expectedBuffer.length === inputBuffer.length && crypto.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
+      return expectedBuffer.length === inputBuffer.length && crypto2.timingSafeEqual(expectedBuffer, inputBuffer) ? tentativeValue : false;
     };
   }
 });
@@ -38351,36 +38351,36 @@ var require_pbkdf2 = __commonJS({
     require_md();
     require_util2();
     var pkcs5 = forge2.pkcs5 = forge2.pkcs5 || {};
-    var crypto;
+    var crypto2;
     if (forge2.util.isNodejs && !forge2.options.usePureJavaScript) {
-      crypto = require("crypto");
+      crypto2 = require("crypto");
     }
     module2.exports = forge2.pbkdf2 = pkcs5.pbkdf2 = function(p, s, c, dkLen, md, callback) {
       if (typeof md === "function") {
         callback = md;
         md = null;
       }
-      if (forge2.util.isNodejs && !forge2.options.usePureJavaScript && crypto.pbkdf2 && (md === null || typeof md !== "object") && (crypto.pbkdf2Sync.length > 4 || (!md || md === "sha1"))) {
+      if (forge2.util.isNodejs && !forge2.options.usePureJavaScript && crypto2.pbkdf2 && (md === null || typeof md !== "object") && (crypto2.pbkdf2Sync.length > 4 || (!md || md === "sha1"))) {
         if (typeof md !== "string") {
           md = "sha1";
         }
         p = Buffer.from(p, "binary");
         s = Buffer.from(s, "binary");
         if (!callback) {
-          if (crypto.pbkdf2Sync.length === 4) {
-            return crypto.pbkdf2Sync(p, s, c, dkLen).toString("binary");
+          if (crypto2.pbkdf2Sync.length === 4) {
+            return crypto2.pbkdf2Sync(p, s, c, dkLen).toString("binary");
           }
-          return crypto.pbkdf2Sync(p, s, c, dkLen, md).toString("binary");
+          return crypto2.pbkdf2Sync(p, s, c, dkLen, md).toString("binary");
         }
-        if (crypto.pbkdf2Sync.length === 4) {
-          return crypto.pbkdf2(p, s, c, dkLen, function(err2, key) {
+        if (crypto2.pbkdf2Sync.length === 4) {
+          return crypto2.pbkdf2(p, s, c, dkLen, function(err2, key) {
             if (err2) {
               return callback(err2);
             }
             callback(null, key.toString("binary"));
           });
         }
-        return crypto.pbkdf2(p, s, c, dkLen, md, function(err2, key) {
+        return crypto2.pbkdf2(p, s, c, dkLen, md, function(err2, key) {
           if (err2) {
             return callback(err2);
           }
@@ -51886,6 +51886,7 @@ var require_lib7 = __commonJS({
 // server/index.ts
 var import_express = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
+var import_crypto = __toESM(require("crypto"), 1);
 
 // server/signer.ts
 var import_fs = __toESM(require("fs"), 1);
@@ -52023,6 +52024,15 @@ async function signAndPackagePass(unsignedZipBuffer) {
 var app = (0, import_express.default)();
 var PORT = process.env.PORT || 3001;
 var HOST = "0.0.0.0";
+var passStore = /* @__PURE__ */ new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, item] of passStore.entries()) {
+    if (now - item.createdAt > 15 * 60 * 1e3) {
+      passStore.delete(id);
+    }
+  }
+}, 5 * 60 * 1e3);
 app.use((0, import_cors.default)({
   origin: "*",
   methods: ["GET", "POST"],
@@ -52059,6 +52069,40 @@ app.post("/api/sign-pass", async (req, res) => {
     console.error("Error in /api/sign-pass:", err);
     res.status(500).json({ error: err?.message || "Failed to process pass" });
   }
+});
+app.post("/api/pass/create-link", async (req, res) => {
+  try {
+    const rawBuffer = req.body;
+    if (!rawBuffer || rawBuffer.length === 0) {
+      return res.status(400).json({ error: "Missing zip binary buffer in request body" });
+    }
+    const result = await signAndPackagePass(rawBuffer);
+    const passId = import_crypto.default.randomBytes(8).toString("hex");
+    passStore.set(passId, { zipBuffer: result.zipBuffer, createdAt: Date.now() });
+    const downloadUrl = `${req.protocol}://${req.get("host")}/api/pass/download/${passId}.pkpass`;
+    res.json({
+      success: true,
+      passId,
+      downloadUrl,
+      signed: result.signed,
+      message: result.message
+    });
+  } catch (err) {
+    console.error("Error in /api/pass/create-link:", err);
+    res.status(500).json({ error: err?.message || "Failed to create pass link" });
+  }
+});
+app.get("/api/pass/download/:filename", (req, res) => {
+  const filename = req.params.filename || "";
+  const passId = filename.replace(".pkpass", "");
+  const item = passStore.get(passId);
+  if (!item) {
+    return res.status(404).send("Pass link expired or not found. Please export again from PassCraft.");
+  }
+  res.setHeader("Content-Type", "application/vnd.apple.pkpass");
+  res.setHeader("Content-Disposition", 'inline; filename="pass.pkpass"');
+  res.setHeader("Cache-Control", "no-cache");
+  res.send(item.zipBuffer);
 });
 app.listen(Number(PORT), HOST, () => {
   console.log(`\u{1F680} PassCraft Signing Server started on ${HOST}:${PORT}`);
