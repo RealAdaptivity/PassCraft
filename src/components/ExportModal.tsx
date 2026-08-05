@@ -49,13 +49,26 @@ export const ExportModal: React.FC<ExportModalProps> = ({ passData, onClose }) =
       } catch (e) {
         console.log('Server signer offline, providing client-side bundle.', e);
       }
-      
-      const url = URL.createObjectURL(finalBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+
+      // iOS Safari: convert to base64 data URL so it opens natively in Apple Wallet
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        const arrayBuffer = await finalBlob.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        const dataUrl = `data:application/vnd.apple.pkpass;base64,${base64}`;
+        window.location.href = dataUrl;
+      } else {
+        // Desktop: standard blob URL download
+        const url = URL.createObjectURL(finalBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
       
       fireConfetti();
     } catch (err) {
