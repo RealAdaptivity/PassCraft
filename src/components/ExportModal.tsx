@@ -30,9 +30,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({ passData, onClose }) =
       
       let finalBlob = zipBlob;
 
-      // Try server signing endpoint
+      // Try server signing endpoint (Railway cloud or localhost)
+      const signingServerUrl = import.meta.env.VITE_SIGNING_SERVER_URL || 'http://localhost:3001';
       try {
-        const response = await fetch('http://localhost:3001/api/sign-pass', {
+        const response = await fetch(`${signingServerUrl}/api/sign-pass`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/zip' },
           body: zipBlob

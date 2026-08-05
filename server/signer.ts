@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import JSZip from 'jszip';
-import crypto from 'crypto';
 
 const CERTS_DIR = path.join(process.cwd(), 'certs');
 
@@ -12,46 +11,61 @@ export interface PassSignResult {
   message: string;
 }
 
-export function isCertificatesAvailable(): boolean {
-  const pemExist = fs.existsSync(path.join(CERTS_DIR, 'pass.pem')) && 
-                   fs.existsSync(path.join(CERTS_DIR, 'pass.key')) && 
-                   fs.existsSync(path.join(CERTS_DIR, 'wwdr.pem'));
-  const p12Exist = fs.existsSync(path.join(CERTS_DIR, 'pass.p12'));
-  return pemExist || p12Exist;
+// Read cert from env var (base64) or file
+function getCertContent(envVar: string, filePath: string): string | null {
+  // Try environment variable first (Railway deployment)
+  const envVal = process.env[envVar];
+  if (envVal) {
+    return Buffer.from(envVal, 'base64').toString('utf-8');
+  }
+  // Fall back to file (local dev)
+  if (fs.existsSync(filePath)) {
+    return fs.readFileSync(filePath, 'utf-8');
+  }
+  return null;
 }
 
-export async function signAndPackagePass(unsignedZipBuffer: Buffer, password: string = ''): Promise<PassSignResult> {
+export function isCertificatesAvailable(): boolean {
+  // Check env vars (Railway)
+  if (process.env.PASS_PEM && process.env.PASS_KEY && process.env.WWDR_PEM) {
+    return true;
+  }
+  // Check local files
+  const passPem = path.join(CERTS_DIR, 'pass.pem');
+  const passKey = path.join(CERTS_DIR, 'pass.key');
+  const wwdrPem = path.join(CERTS_DIR, 'wwdr.pem');
+  const passCer = path.join(CERTS_DIR, 'pass.cer');
+  return (fs.existsSync(passPem) || fs.existsSync(passCer)) && 
+          fs.existsSync(passKey) && 
+          fs.existsSync(wwdrPem);
+}
+
+export async function signAndPackagePass(unsignedZipBuffer: Buffer): Promise<PassSignResult> {
   if (!fs.existsSync(CERTS_DIR)) {
     fs.mkdirSync(CERTS_DIR, { recursive: true });
   }
 
-  const passCer = path.join(CERTS_DIR, 'pass.cer');
-  const passPem = path.join(CERTS_DIR, 'pass.pem');
-  const passKey = path.join(CERTS_DIR, 'pass.key');
-  const wwdrPem = path.join(CERTS_DIR, 'wwdr.pem');
-  const passP12 = path.join(CERTS_DIR, 'pass.p12');
-
-  const opensslBin = fs.existsSync('C:\\Program Files\\Git\\usr\\bin\\openssl.exe') 
-    ? '"C:\\Program Files\\Git\\usr\\bin\\openssl.exe"' 
+  const opensslBin = fs.existsSync('C:\\Program Files\\Git\\usr\\bin\\openssl.exe')
+    ? '"C:\\Program Files\\Git\\usr\\bin\\openssl.exe"'
     : 'openssl';
 
-  // If pass.cer exists, convert to pass.pem
-  if (fs.existsSync(passCer) && (!fs.existsSync(passPem) || fs.statSync(passCer).mtime > fs.statSync(passPem).mtime)) {
-    try {
-      execSync(`${opensslBin} x509 -in "${passCer}" -inform DER -out "${passPem}"`);
-      console.log('Converted pass.cer -> pass.pem successfully!');
-    } catch (err) {
-      console.warn('Failed to convert pass.cer:', err);
-    }
-  }
+  // Get cert contents (from env vars or files)
+  let passPemContent = getCertContent('PASS_PEM', path.join(CERTS_DIR, 'pass.pem'));
+  const passKeyContent = getCertContent('PASS_KEY', path.join(CERTS_DIR, 'pass.key'));
+  const wwdrPemContent = getCertContent('WWDR_PEM', path.join(CERTS_DIR, 'wwdr.pem'));
 
-  // Convert p12 to pem/key if needed
-  if (!fs.existsSync(passPem) && fs.existsSync(passP12)) {
-    try {
-      execSync(`${opensslBin} pkcs12 -in "${passP12}" -clcerts -nokeys -out "${passPem}" -passin pass:${password}`);
-      execSync(`${opensslBin} pkcs12 -in "${passP12}" -nocerts -nodes -out "${passKey}" -passin pass:${password}`);
-    } catch (err) {
-      console.warn('Failed to extract PEM/KEY from pass.p12:', err);
+  // Auto-convert pass.cer -> pass.pem if needed (local only)
+  if (!passPemContent) {
+    const passCer = path.join(CERTS_DIR, 'pass.cer');
+    const passPem = path.join(CERTS_DIR, 'pass.pem');
+    if (fs.existsSync(passCer)) {
+      try {
+        execSync(`${opensslBin} x509 -in "${passCer}" -inform DER -out "${passPem}"`);
+        passPemContent = fs.readFileSync(passPem, 'utf-8');
+        console.log('Converted pass.cer -> pass.pem');
+      } catch (err) {
+        console.warn('Failed to convert pass.cer:', err);
+      }
     }
   }
 
@@ -63,28 +77,36 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer, password: st
   }
 
   const manifestContent = await manifestFile.async('nodebuffer');
-
   let signatureBuffer: Buffer | null = null;
 
-  // Sign manifest using OpenSSL if present
-  if (fs.existsSync(passPem) && fs.existsSync(passKey) && fs.existsSync(wwdrPem)) {
-    const tempManifestPath = path.join(CERTS_DIR, `temp_manifest_${Date.now()}.json`);
-    const tempSignaturePath = path.join(CERTS_DIR, `temp_signature_${Date.now()}`);
+  // Sign if we have all three certs
+  if (passPemContent && passKeyContent && wwdrPemContent) {
+    const tmpDir = process.env.TMPDIR || process.env.TEMP || '/tmp';
+    const ts = Date.now();
+    const tempPem = path.join(tmpDir, `pass_${ts}.pem`);
+    const tempKey = path.join(tmpDir, `pass_${ts}.key`);
+    const tempWwdr = path.join(tmpDir, `wwdr_${ts}.pem`);
+    const tempManifest = path.join(tmpDir, `manifest_${ts}.json`);
+    const tempSig = path.join(tmpDir, `signature_${ts}`);
 
     try {
-      fs.writeFileSync(tempManifestPath, manifestContent);
-      
-      const cmd = `${opensslBin} smime -sign -signer "${passPem}" -inkey "${passKey}" -certfile "${wwdrPem}" -in "${tempManifestPath}" -out "${tempSignaturePath}" -outform DER -binary`;
+      fs.writeFileSync(tempPem, passPemContent);
+      fs.writeFileSync(tempKey, passKeyContent);
+      fs.writeFileSync(tempWwdr, wwdrPemContent);
+      fs.writeFileSync(tempManifest, manifestContent);
+
+      const cmd = `${opensslBin} smime -sign -signer "${tempPem}" -inkey "${tempKey}" -certfile "${tempWwdr}" -in "${tempManifest}" -out "${tempSig}" -outform DER -binary`;
       execSync(cmd);
 
-      if (fs.existsSync(tempSignaturePath)) {
-        signatureBuffer = fs.readFileSync(tempSignaturePath);
+      if (fs.existsSync(tempSig)) {
+        signatureBuffer = fs.readFileSync(tempSig);
       }
     } catch (err) {
       console.error('OpenSSL signing failed:', err);
     } finally {
-      if (fs.existsSync(tempManifestPath)) fs.unlinkSync(tempManifestPath);
-      if (fs.existsSync(tempSignaturePath)) fs.unlinkSync(tempSignaturePath);
+      [tempPem, tempKey, tempWwdr, tempManifest, tempSig].forEach(f => {
+        try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch {}
+      });
     }
   }
 
@@ -97,12 +119,11 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer, password: st
       message: 'Pass signed successfully with Apple Pass Certificate!'
     };
   } else {
-    // Return standard spec pass if certificates are not uploaded yet
-    const unsignedZipBufferFinal = await zip.generateAsync({ type: 'nodebuffer', mimeType: 'application/vnd.apple.pkpass' });
+    const unsignedFinal = await zip.generateAsync({ type: 'nodebuffer', mimeType: 'application/vnd.apple.pkpass' });
     return {
       signed: false,
-      zipBuffer: unsignedZipBufferFinal,
-      message: 'Unsigned pass bundle (Add certificates to ./certs/ for automatic 1-click signing)'
+      zipBuffer: unsignedFinal,
+      message: 'Unsigned pass bundle (add PASS_PEM, PASS_KEY, WWDR_PEM env vars to enable signing)'
     };
   }
 }
