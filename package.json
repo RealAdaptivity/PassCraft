@@ -6,11 +6,9 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"tsx server/index.ts\"",
     "server": "tsx server/index.ts",
-    "start": "node dist-server/index.js",
+    "start": "node dist-server/server.cjs",
     "build": "tsc && vite build",
-    "build:server": "tsc --project tsconfig.server.json",
-    "railway:build": "npm run build:server",
-    "railway:start": "node dist-server/index.js",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --outfile=dist-server/server.cjs --format=cjs",
     "deploy": "npm run build && gh-pages -d dist",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
@@ -36,6 +34,7 @@
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^10.0.4",
+    "esbuild": "^0.25.0",
     "gh-pages": "^6.3.0",
     "tsx": "^4.23.7",
     "typescript": "^5.2.2",

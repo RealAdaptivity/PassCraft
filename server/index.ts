@@ -4,14 +4,10 @@ import { isCertificatesAvailable, signAndPackagePass } from './signer';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const HOST = '0.0.0.0';
 
 app.use(cors({
-  origin: [
-    'https://realadaptivity.github.io',
-    'http://localhost:5173',
-    /\.ngrok.*$/,
-    /\.loca\.lt$/,
-  ],
+  origin: '*',
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
@@ -56,7 +52,7 @@ app.post('/api/sign-pass', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 PassCraft Signing Server running on port ${PORT}`);
+app.listen(Number(PORT), HOST, () => {
+  console.log(`🚀 PassCraft Signing Server running on http://${HOST}:${PORT}`);
   console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Loaded' : '⚠️ Missing'}`);
 });
