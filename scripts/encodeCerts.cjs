@@ -26,7 +26,12 @@ console.log('─'.repeat(60));
 
 const passPem = encodeFile('pass.pem');
 const passKey = encodeFile('pass.key');
-const wwdrPem = encodeFile('wwdr.pem');
+
+// Use full chain (WWDR G4 + Apple Root CA) for WWDR_PEM
+let wwdrPem = encodeFile('wwdr_full_chain.pem');
+if (!wwdrPem) {
+  wwdrPem = encodeFile('wwdr.pem');
+}
 
 if (passPem) {
   console.log(`\nPASS_PEM=\n${passPem}\n`);
@@ -39,4 +44,4 @@ if (wwdrPem) {
 }
 
 console.log('─'.repeat(60));
-console.log('\n✅ Go to Railway > Your Service > Variables and add each one above.\n');
+console.log('\n✅ Go to Railway > Your Service > Variables and update WWDR_PEM with the new value above.\n');

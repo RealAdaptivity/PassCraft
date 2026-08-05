@@ -51931,9 +51931,16 @@ function createPkcs7SignatureNodeForge(manifestBuffer, passPem, passKey, wwdrPem
   p7.content = import_node_forge.default.util.createBuffer(manifestBuffer.toString("binary"), "raw");
   const signerCert = import_node_forge.default.pki.certificateFromPem(passPem);
   const signerKey = import_node_forge.default.pki.privateKeyFromPem(passKey);
-  const wwdrCert = import_node_forge.default.pki.certificateFromPem(wwdrPem);
   p7.addCertificate(signerCert);
-  p7.addCertificate(wwdrCert);
+  const certBlocks = wwdrPem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [wwdrPem];
+  certBlocks.forEach((c) => {
+    try {
+      const cert = import_node_forge.default.pki.certificateFromPem(c);
+      p7.addCertificate(cert);
+    } catch (e) {
+      console.warn("Failed parsing CA cert block:", e);
+    }
+  });
   p7.addSigner({
     key: signerKey,
     certificate: signerCert,

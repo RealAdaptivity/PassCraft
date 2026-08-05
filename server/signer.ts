@@ -49,17 +49,26 @@ export function isCertificatesAvailable(): boolean {
           fs.existsSync(wwdrPem);
 }
 
-// Pure JS PKCS7 signing using node-forge (No OpenSSL binary required!)
 function createPkcs7SignatureNodeForge(manifestBuffer: Buffer, passPem: string, passKey: string, wwdrPem: string): Buffer {
   const p7 = forge.pkcs7.createSignedData();
   p7.content = forge.util.createBuffer(manifestBuffer.toString('binary'), 'raw');
 
   const signerCert = forge.pki.certificateFromPem(passPem);
   const signerKey = forge.pki.privateKeyFromPem(passKey);
-  const wwdrCert = forge.pki.certificateFromPem(wwdrPem);
 
   p7.addCertificate(signerCert);
-  p7.addCertificate(wwdrCert);
+
+  // Parse and add all intermediate & root CA certificates in chain
+  const certBlocks = wwdrPem.match(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g) || [wwdrPem];
+  certBlocks.forEach(c => {
+    try {
+      const cert = forge.pki.certificateFromPem(c);
+      p7.addCertificate(cert);
+    } catch (e) {
+      console.warn('Failed parsing CA cert block:', e);
+    }
+  });
+
   p7.addSigner({
     key: signerKey,
     certificate: signerCert,
