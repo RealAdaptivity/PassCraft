@@ -2,19 +2,15 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install dependencies
+# Install production dependencies only
 COPY package*.json ./
-RUN npm install
+RUN npm install --only=production
 
-# Copy source code
-COPY . .
+# Copy pre-compiled server bundle
+COPY dist-server ./dist-server
 
-# Build frontend and server
-RUN npm run build
-
-# Expose server port
+# Expose port
 EXPOSE 8080
 ENV PORT=8080
 
-# Start server
 CMD ["node", "dist-server/server.cjs"]
