@@ -50,26 +50,25 @@ export const ExportModal: React.FC<ExportModalProps> = ({ passData, onClose }) =
         console.log('Server signer offline, providing client-side bundle.', e);
       }
 
-      // iOS Safari: convert to base64 data URL so it opens natively in Apple Wallet
+      // Create Blob URL with explicit Apple Wallet MIME type
+      const passBlob = new Blob([await finalBlob.arrayBuffer()], { type: 'application/vnd.apple.pkpass' });
+      const url = URL.createObjectURL(passBlob);
+
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       if (isIOS) {
-        const arrayBuffer = await finalBlob.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuffer);
-        let binary = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const base64 = btoa(binary);
-        const dataUrl = `data:application/vnd.apple.pkpass;base64,${base64}`;
-        window.location.href = dataUrl;
+        // On iOS Safari, navigating directly to the blob URL triggers native Apple Wallet preview
+        window.location.href = url;
       } else {
-        // Desktop: standard blob URL download
-        const url = URL.createObjectURL(finalBlob);
+        // Desktop / Android download
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
       }
       
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
       fireConfetti();
     } catch (err) {
       console.error('Failed to export PKPass:', err);
