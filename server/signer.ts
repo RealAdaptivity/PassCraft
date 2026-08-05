@@ -14,9 +14,12 @@ export interface PassSignResult {
 
 // Robust PEM cert reader from env var (base64 or raw PEM) or local file
 function getCertContent(envVar: string, filePath: string): string | null {
-  const envVal = process.env[envVar];
+  let envVal = process.env[envVar];
   if (envVal) {
-    const cleaned = envVal.trim();
+    let cleaned = envVal.trim();
+    // Strip accidental PASS_PEM=, PASS_KEY=, WWDR_PEM= prefix
+    cleaned = cleaned.replace(new RegExp(`^${envVar}=`, 'i'), '').trim();
+
     if (cleaned.includes('-----BEGIN')) {
       return cleaned;
     }
@@ -30,6 +33,7 @@ function getCertContent(envVar: string, filePath: string): string | null {
     }
     return cleaned;
   }
+
   if (fs.existsSync(filePath)) {
     return fs.readFileSync(filePath, 'utf-8');
   }

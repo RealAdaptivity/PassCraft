@@ -51896,9 +51896,10 @@ var import_jszip = __toESM(require_lib6(), 1);
 var import_node_forge = __toESM(require_lib7(), 1);
 var CERTS_DIR = import_path.default.join(process.cwd(), "certs");
 function getCertContent(envVar, filePath) {
-  const envVal = process.env[envVar];
+  let envVal = process.env[envVar];
   if (envVal) {
-    const cleaned = envVal.trim();
+    let cleaned = envVal.trim();
+    cleaned = cleaned.replace(new RegExp(`^${envVar}=`, "i"), "").trim();
     if (cleaned.includes("-----BEGIN")) {
       return cleaned;
     }
