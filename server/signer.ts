@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import JSZip from 'jszip';
+import forge from 'node-forge';
 
 const CERTS_DIR = path.join(process.cwd(), 'certs');
 
@@ -16,7 +17,13 @@ function getCertContent(envVar: string, filePath: string): string | null {
   // Try environment variable first (Railway deployment)
   const envVal = process.env[envVar];
   if (envVal) {
-    return Buffer.from(envVal, 'base64').toString('utf-8');
+    try {
+      const decoded = Buffer.from(envVal, 'base64').toString('utf-8');
+      if (decoded.includes('BEGIN')) return decoded;
+      return envVal; // in case user pasted raw PEM text instead of base64
+    } catch {
+      return envVal;
+    }
   }
   // Fall back to file (local dev)
   if (fs.existsSync(filePath)) {
@@ -40,34 +47,50 @@ export function isCertificatesAvailable(): boolean {
           fs.existsSync(wwdrPem);
 }
 
+// Pure JS PKCS7 signing using node-forge (No OpenSSL binary required!)
+function createPkcs7SignatureNodeForge(manifestBuffer: Buffer, passPem: string, passKey: string, wwdrPem: string): Buffer {
+  const p7 = forge.pkcs7.createSignedData();
+  p7.content = forge.util.createBuffer(manifestBuffer.toString('binary'), 'raw');
+
+  const signerCert = forge.pki.certificateFromPem(passPem);
+  const signerKey = forge.pki.privateKeyFromPem(passKey);
+  const wwdrCert = forge.pki.certificateFromPem(wwdrPem);
+
+  p7.addCertificate(signerCert);
+  p7.addCertificate(wwdrCert);
+  p7.addSigner({
+    key: signerKey,
+    certificate: signerCert,
+    digestAlgorithm: forge.pki.oids.sha1,
+    authenticatedAttributes: [
+      {
+        type: forge.pki.oids.contentType,
+        value: forge.pki.oids.data
+      },
+      {
+        type: forge.pki.oids.messageDigest
+      },
+      {
+        type: forge.pki.oids.signingTime,
+        value: new Date()
+      }
+    ]
+  });
+
+  p7.sign({ detached: true });
+  const der = forge.asn1.toDer(p7.toAsn1()).getBytes();
+  return Buffer.from(der, 'binary');
+}
+
 export async function signAndPackagePass(unsignedZipBuffer: Buffer): Promise<PassSignResult> {
   if (!fs.existsSync(CERTS_DIR)) {
     fs.mkdirSync(CERTS_DIR, { recursive: true });
   }
 
-  const opensslBin = fs.existsSync('C:\\Program Files\\Git\\usr\\bin\\openssl.exe')
-    ? '"C:\\Program Files\\Git\\usr\\bin\\openssl.exe"'
-    : 'openssl';
-
   // Get cert contents (from env vars or files)
   let passPemContent = getCertContent('PASS_PEM', path.join(CERTS_DIR, 'pass.pem'));
   const passKeyContent = getCertContent('PASS_KEY', path.join(CERTS_DIR, 'pass.key'));
   const wwdrPemContent = getCertContent('WWDR_PEM', path.join(CERTS_DIR, 'wwdr.pem'));
-
-  // Auto-convert pass.cer -> pass.pem if needed (local only)
-  if (!passPemContent) {
-    const passCer = path.join(CERTS_DIR, 'pass.cer');
-    const passPem = path.join(CERTS_DIR, 'pass.pem');
-    if (fs.existsSync(passCer)) {
-      try {
-        execSync(`${opensslBin} x509 -in "${passCer}" -inform DER -out "${passPem}"`);
-        passPemContent = fs.readFileSync(passPem, 'utf-8');
-        console.log('Converted pass.cer -> pass.pem');
-      } catch (err) {
-        console.warn('Failed to convert pass.cer:', err);
-      }
-    }
-  }
 
   const zip = await JSZip.loadAsync(unsignedZipBuffer);
   const manifestFile = zip.file('manifest.json');
@@ -81,32 +104,46 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer): Promise<Pas
 
   // Sign if we have all three certs
   if (passPemContent && passKeyContent && wwdrPemContent) {
-    const tmpDir = process.env.TMPDIR || process.env.TEMP || '/tmp';
-    const ts = Date.now();
-    const tempPem = path.join(tmpDir, `pass_${ts}.pem`);
-    const tempKey = path.join(tmpDir, `pass_${ts}.key`);
-    const tempWwdr = path.join(tmpDir, `wwdr_${ts}.pem`);
-    const tempManifest = path.join(tmpDir, `manifest_${ts}.json`);
-    const tempSig = path.join(tmpDir, `signature_${ts}`);
-
+    // 1. Try pure JavaScript PKCS7 signing first (pure JS, works everywhere)
     try {
-      fs.writeFileSync(tempPem, passPemContent);
-      fs.writeFileSync(tempKey, passKeyContent);
-      fs.writeFileSync(tempWwdr, wwdrPemContent);
-      fs.writeFileSync(tempManifest, manifestContent);
+      signatureBuffer = createPkcs7SignatureNodeForge(manifestContent, passPemContent, passKeyContent, wwdrPemContent);
+      console.log('✅ Pass signed successfully using pure JS (node-forge)');
+    } catch (forgeErr) {
+      console.warn('Pure JS signing failed, trying OpenSSL CLI fallback:', forgeErr);
 
-      const cmd = `${opensslBin} smime -sign -signer "${tempPem}" -inkey "${tempKey}" -certfile "${tempWwdr}" -in "${tempManifest}" -out "${tempSig}" -outform DER -binary`;
-      execSync(cmd);
+      // 2. Fallback to OpenSSL CLI if available
+      const opensslBin = fs.existsSync('C:\\Program Files\\Git\\usr\\bin\\openssl.exe')
+        ? '"C:\\Program Files\\Git\\usr\\bin\\openssl.exe"'
+        : 'openssl';
 
-      if (fs.existsSync(tempSig)) {
-        signatureBuffer = fs.readFileSync(tempSig);
+      const tmpDir = process.env.TMPDIR || process.env.TEMP || '/tmp';
+      const ts = Date.now();
+      const tempPem = path.join(tmpDir, `pass_${ts}.pem`);
+      const tempKey = path.join(tmpDir, `pass_${ts}.key`);
+      const tempWwdr = path.join(tmpDir, `wwdr_${ts}.pem`);
+      const tempManifest = path.join(tmpDir, `manifest_${ts}.json`);
+      const tempSig = path.join(tmpDir, `signature_${ts}`);
+
+      try {
+        fs.writeFileSync(tempPem, passPemContent);
+        fs.writeFileSync(tempKey, passKeyContent);
+        fs.writeFileSync(tempWwdr, wwdrPemContent);
+        fs.writeFileSync(tempManifest, manifestContent);
+
+        const cmd = `${opensslBin} smime -sign -signer "${tempPem}" -inkey "${tempKey}" -certfile "${tempWwdr}" -in "${tempManifest}" -out "${tempSig}" -outform DER -binary`;
+        execSync(cmd);
+
+        if (fs.existsSync(tempSig)) {
+          signatureBuffer = fs.readFileSync(tempSig);
+          console.log('✅ Pass signed successfully using OpenSSL CLI');
+        }
+      } catch (opensslErr) {
+        console.error('OpenSSL CLI signing also failed:', opensslErr);
+      } finally {
+        [tempPem, tempKey, tempWwdr, tempManifest, tempSig].forEach(f => {
+          try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch {}
+        });
       }
-    } catch (err) {
-      console.error('OpenSSL signing failed:', err);
-    } finally {
-      [tempPem, tempKey, tempWwdr, tempManifest, tempSig].forEach(f => {
-        try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch {}
-      });
     }
   }
 
