@@ -116,7 +116,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Promise Rejection in server process:', reason);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 PassCraft Signing Server started on 0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`🚀 PassCraft Signing Server started on port ${PORT}`);
   console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Certificates Present' : '⚠️ Certificates Missing'}`);
 });
