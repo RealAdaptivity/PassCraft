@@ -116,7 +116,22 @@ process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Promise Rejection in server process:', reason);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 PassCraft Signing Server started on port ${PORT}`);
+const primaryPort = Number(process.env.PORT) || 3000;
+const secondaryPort = 8080;
+
+app.listen(primaryPort, () => {
+  console.log(`🚀 PassCraft Signing Server started on primary port ${primaryPort}`);
   console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Certificates Present' : '⚠️ Certificates Missing'}`);
 });
+
+if (primaryPort !== secondaryPort) {
+  try {
+    const backupServer = express();
+    backupServer.use(app);
+    backupServer.listen(secondaryPort, () => {
+      console.log(`🚀 PassCraft Signing Server backup listener on port ${secondaryPort}`);
+    });
+  } catch (err) {
+    console.warn('Backup port 8080 already bound or unavailable:', err);
+  }
+}

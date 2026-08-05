@@ -52122,10 +52122,23 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (reason) => {
   console.error("\u26A0\uFE0F Unhandled Promise Rejection in server process:", reason);
 });
-app.listen(PORT, () => {
-  console.log(`\u{1F680} PassCraft Signing Server started on port ${PORT}`);
+var primaryPort = Number(process.env.PORT) || 3e3;
+var secondaryPort = 8080;
+app.listen(primaryPort, () => {
+  console.log(`\u{1F680} PassCraft Signing Server started on primary port ${primaryPort}`);
   console.log(`\u{1F4CB} Cert status: ${isCertificatesAvailable() ? "\u2705 Certificates Present" : "\u26A0\uFE0F Certificates Missing"}`);
 });
+if (primaryPort !== secondaryPort) {
+  try {
+    const backupServer = (0, import_express.default)();
+    backupServer.use(app);
+    backupServer.listen(secondaryPort, () => {
+      console.log(`\u{1F680} PassCraft Signing Server backup listener on port ${secondaryPort}`);
+    });
+  } catch (err) {
+    console.warn("Backup port 8080 already bound or unavailable:", err);
+  }
+}
 /*! Bundled license information:
 
 depd/index.js:
