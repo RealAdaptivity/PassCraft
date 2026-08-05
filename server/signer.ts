@@ -25,18 +25,33 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer, password: st
     fs.mkdirSync(CERTS_DIR, { recursive: true });
   }
 
+  const passCer = path.join(CERTS_DIR, 'pass.cer');
   const passPem = path.join(CERTS_DIR, 'pass.pem');
   const passKey = path.join(CERTS_DIR, 'pass.key');
   const wwdrPem = path.join(CERTS_DIR, 'wwdr.pem');
   const passP12 = path.join(CERTS_DIR, 'pass.p12');
 
+  const opensslBin = fs.existsSync('C:\\Program Files\\Git\\usr\\bin\\openssl.exe') 
+    ? '"C:\\Program Files\\Git\\usr\\bin\\openssl.exe"' 
+    : 'openssl';
+
+  // If pass.cer exists, convert to pass.pem
+  if (fs.existsSync(passCer) && (!fs.existsSync(passPem) || fs.statSync(passCer).mtime > fs.statSync(passPem).mtime)) {
+    try {
+      execSync(`${opensslBin} x509 -in "${passCer}" -inform DER -out "${passPem}"`);
+      console.log('Converted pass.cer -> pass.pem successfully!');
+    } catch (err) {
+      console.warn('Failed to convert pass.cer:', err);
+    }
+  }
+
   // Convert p12 to pem/key if needed
   if (!fs.existsSync(passPem) && fs.existsSync(passP12)) {
     try {
-      execSync(`openssl pkcs12 -in "${passP12}" -clcerts -nokeys -out "${passPem}" -passin pass:${password}`);
-      execSync(`openssl pkcs12 -in "${passP12}" -nocerts -nodes -out "${passKey}" -passin pass:${password}`);
+      execSync(`${opensslBin} pkcs12 -in "${passP12}" -clcerts -nokeys -out "${passPem}" -passin pass:${password}`);
+      execSync(`${opensslBin} pkcs12 -in "${passP12}" -nocerts -nodes -out "${passKey}" -passin pass:${password}`);
     } catch (err) {
-      console.warn('Failed to extract PEM/KEY from pass.p12 using OpenSSL:', err);
+      console.warn('Failed to extract PEM/KEY from pass.p12:', err);
     }
   }
 
@@ -59,7 +74,7 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer, password: st
     try {
       fs.writeFileSync(tempManifestPath, manifestContent);
       
-      const cmd = `openssl smime -sign -signer "${passPem}" -inkey "${passKey}" -certfile "${wwdrPem}" -in "${tempManifestPath}" -out "${tempSignaturePath}" -outform DER -binary`;
+      const cmd = `${opensslBin} smime -sign -signer "${passPem}" -inkey "${passKey}" -certfile "${wwdrPem}" -in "${tempManifestPath}" -out "${tempSignaturePath}" -outform DER -binary`;
       execSync(cmd);
 
       if (fs.existsSync(tempSignaturePath)) {
