@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { isCertificatesAvailable, signAndPackagePass } from './signer';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 8080;
 
 // In-memory pass cache for direct HTTPS downloads (expires after 15 mins)
 const passStore = new Map<string, { zipBuffer: Buffer; createdAt: number }>();

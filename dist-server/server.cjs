@@ -52027,7 +52027,7 @@ async function signAndPackagePass(unsignedZipBuffer) {
 
 // server/index.ts
 var app = (0, import_express.default)();
-var PORT = Number(process.env.PORT) || 3e3;
+var PORT = Number(process.env.PORT) || 8080;
 var passStore = /* @__PURE__ */ new Map();
 setInterval(() => {
   const now = Date.now();
