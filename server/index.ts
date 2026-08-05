@@ -5,8 +5,7 @@ import crypto from 'crypto';
 import { isCertificatesAvailable, signAndPackagePass } from './signer';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0';
+const PORT = Number(process.env.PORT) || 3000;
 
 // In-memory pass cache for direct HTTPS downloads (expires after 15 mins)
 const passStore = new Map<string, { zipBuffer: Buffer; createdAt: number }>();
@@ -117,7 +116,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled Promise Rejection in server process:', reason);
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 PassCraft Signing Server started on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 PassCraft Signing Server started on 0.0.0.0:${PORT}`);
   console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Certificates Present' : '⚠️ Certificates Missing'}`);
 });

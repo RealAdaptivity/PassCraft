@@ -52027,7 +52027,7 @@ async function signAndPackagePass(unsignedZipBuffer) {
 
 // server/index.ts
 var app = (0, import_express.default)();
-var PORT = process.env.PORT || 3001;
+var PORT = Number(process.env.PORT) || 3e3;
 var passStore = /* @__PURE__ */ new Map();
 setInterval(() => {
   const now = Date.now();
@@ -52114,8 +52114,8 @@ process.on("uncaughtException", (err) => {
 process.on("unhandledRejection", (reason) => {
   console.error("\u26A0\uFE0F Unhandled Promise Rejection in server process:", reason);
 });
-app.listen(PORT, () => {
-  console.log(`\u{1F680} PassCraft Signing Server started on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`\u{1F680} PassCraft Signing Server started on 0.0.0.0:${PORT}`);
   console.log(`\u{1F4CB} Cert status: ${isCertificatesAvailable() ? "\u2705 Certificates Present" : "\u26A0\uFE0F Certificates Missing"}`);
 });
 /*! Bundled license information:
