@@ -7,7 +7,7 @@
     "dev": "concurrently \"vite\" \"tsx server/index.ts\"",
     "server": "tsx server/index.ts",
     "start": "node dist-server/server.cjs",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run build:server",
     "build:server": "esbuild server/index.ts --bundle --platform=node --target=node18 --outfile=dist-server/server.cjs --format=cjs",
     "deploy": "npm run build && gh-pages -d dist",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -23,7 +23,8 @@
     "qrcode": "^1.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "tsx": "^4.23.7"
+    "tsx": "^4.23.7",
+    "esbuild": "^0.25.0"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
@@ -34,7 +35,6 @@
     "@types/react-dom": "^18.2.22",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^10.0.4",
-    "esbuild": "^0.25.0",
     "gh-pages": "^6.3.0",
     "tsx": "^4.23.7",
     "typescript": "^5.2.2",
