@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Eye, Sliders, Download, LayoutGrid, Bookmark } from 'lucide-react';
 import { ApplePassData, TemplatePreset } from './types/pass';
 import { DEFAULT_PASS } from './utils/defaults';
 import { Header } from './components/Header';
@@ -101,6 +102,9 @@ export const App: React.FC = () => {
     }
   };
 
+  // Mobile tab state
+  const [mobileTab, setMobileTab] = useState<'preview' | 'edit'>('preview');
+
   return (
     <div className="app-container">
       <Header 
@@ -112,7 +116,7 @@ export const App: React.FC = () => {
         savedPassesCount={savedPasses.length}
       />
 
-      <main className="workspace-grid">
+      <main className={`workspace-grid ${mobileTab === 'edit' ? 'show-editor' : 'show-preview'}`}>
         {/* Sticky 3D Preview Column */}
         <PassPreview 
           passData={passData}
@@ -127,6 +131,47 @@ export const App: React.FC = () => {
           onUpdatePass={handleUpdatePass}
         />
       </main>
+
+      {/* Mobile Bottom Tab Bar */}
+      <nav className="mobile-tab-bar">
+        <button
+          className={`mobile-tab-btn ${mobileTab === 'preview' ? 'active' : ''}`}
+          onClick={() => setMobileTab('preview')}
+        >
+          <Eye />
+          Preview
+        </button>
+        <button
+          className={`mobile-tab-btn ${mobileTab === 'edit' ? 'active' : ''}`}
+          onClick={() => setMobileTab('edit')}
+        >
+          <Sliders />
+          Edit
+        </button>
+        <button
+          className="mobile-export-btn"
+          onClick={() => setActiveModal('export')}
+        >
+          <span className="tab-icon-wrap">
+            <Download size={18} />
+          </span>
+          Export
+        </button>
+        <button
+          className="mobile-tab-btn"
+          onClick={() => setActiveModal('templates')}
+        >
+          <LayoutGrid />
+          Templates
+        </button>
+        <button
+          className="mobile-tab-btn"
+          onClick={() => setActiveModal('saved')}
+        >
+          <Bookmark />
+          Saved
+        </button>
+      </nav>
 
       {/* Modals */}
       {activeModal === 'templates' && (

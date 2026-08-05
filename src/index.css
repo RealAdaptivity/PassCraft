@@ -142,10 +142,10 @@ body {
 .workspace-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 1.5rem;
   max-width: 1440px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem 1rem 100px 1rem; /* bottom padding for mobile tab bar */
   width: 100%;
   flex: 1;
 }
@@ -153,8 +153,171 @@ body {
 @media (min-width: 1024px) {
   .workspace-grid {
     grid-template-columns: 440px 1fr;
+    padding: 2rem;
+    gap: 2rem;
   }
 }
+
+/* ===== MOBILE TAB BAR ===== */
+.mobile-tab-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(13, 18, 30, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.5rem 1rem calc(0.5rem + env(safe-area-inset-bottom));
+  gap: 0;
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.25rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  min-height: 56px;
+}
+
+.mobile-tab-btn.active {
+  color: var(--accent-blue);
+}
+
+.mobile-tab-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.75;
+}
+
+.mobile-tab-btn.active svg {
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
+}
+
+.mobile-export-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.25rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+  color: white;
+  min-height: 56px;
+}
+
+.mobile-export-btn .tab-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.4);
+}
+
+@media (max-width: 1023px) {
+  .mobile-tab-bar {
+    display: flex;
+  }
+
+  /* Hide the preview pane on mobile when editor tab is active */
+  .workspace-grid.show-editor .preview-pane {
+    display: none;
+  }
+
+  /* Hide the editor on mobile when preview tab is active */
+  .workspace-grid.show-preview .editor-pane {
+    display: none;
+  }
+
+  /* Full width on mobile */
+  .preview-pane,
+  .editor-pane {
+    width: 100%;
+  }
+
+  .card-perspective-wrapper {
+    width: min(320px, 90vw);
+    min-height: 440px;
+  }
+
+  /* Compact header on mobile */
+  .app-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .brand-logo span:not(.brand-badge) {
+    display: none;
+  }
+
+  .brand-badge {
+    display: none;
+  }
+
+  /* Hide desktop header action buttons on mobile (they're in tab bar) */
+  .header-actions {
+    display: none;
+  }
+
+  /* Editor tabs scrollable on mobile */
+  .editor-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .editor-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Bigger touch targets for inputs */
+  input, select, textarea {
+    font-size: 16px !important; /* prevents iOS zoom on focus */
+    min-height: 44px;
+  }
+
+  .editor-tab-btn {
+    white-space: nowrap;
+    min-height: 44px;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+}
+
+/* Prevent iOS rubber band scroll on fixed elements */
+@supports (-webkit-overflow-scrolling: touch) {
+  .editor-panel {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 
 /* Interactive 3D Card Container */
 .preview-pane {
