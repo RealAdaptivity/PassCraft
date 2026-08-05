@@ -51898,13 +51898,18 @@ var CERTS_DIR = import_path.default.join(process.cwd(), "certs");
 function getCertContent(envVar, filePath) {
   const envVal = process.env[envVar];
   if (envVal) {
-    try {
-      const decoded = Buffer.from(envVal, "base64").toString("utf-8");
-      if (decoded.includes("BEGIN")) return decoded;
-      return envVal;
-    } catch {
-      return envVal;
+    const cleaned = envVal.trim();
+    if (cleaned.includes("-----BEGIN")) {
+      return cleaned;
     }
+    try {
+      const decoded = Buffer.from(cleaned.replace(/[\s\r\n]+/g, ""), "base64").toString("utf-8");
+      if (decoded.includes("-----BEGIN")) {
+        return decoded;
+      }
+    } catch {
+    }
+    return cleaned;
   }
   if (import_fs.default.existsSync(filePath)) {
     return import_fs.default.readFileSync(filePath, "utf-8");
@@ -52103,6 +52108,12 @@ app.get("/api/pass/download/:filename", (req, res) => {
   res.setHeader("Content-Disposition", 'inline; filename="pass.pkpass"');
   res.setHeader("Cache-Control", "no-cache");
   res.send(item.zipBuffer);
+});
+process.on("uncaughtException", (err) => {
+  console.error("\u26A0\uFE0F Uncaught Exception in server process:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("\u26A0\uFE0F Unhandled Promise Rejection in server process:", reason);
 });
 app.listen(Number(PORT), HOST, () => {
   console.log(`\u{1F680} PassCraft Signing Server started on ${HOST}:${PORT}`);

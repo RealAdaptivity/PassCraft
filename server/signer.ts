@@ -12,20 +12,24 @@ export interface PassSignResult {
   message: string;
 }
 
-// Read cert from env var (base64) or file
+// Robust PEM cert reader from env var (base64 or raw PEM) or local file
 function getCertContent(envVar: string, filePath: string): string | null {
-  // Try environment variable first (Railway deployment)
   const envVal = process.env[envVar];
   if (envVal) {
-    try {
-      const decoded = Buffer.from(envVal, 'base64').toString('utf-8');
-      if (decoded.includes('BEGIN')) return decoded;
-      return envVal; // in case user pasted raw PEM text instead of base64
-    } catch {
-      return envVal;
+    const cleaned = envVal.trim();
+    if (cleaned.includes('-----BEGIN')) {
+      return cleaned;
     }
+    try {
+      const decoded = Buffer.from(cleaned.replace(/[\s\r\n]+/g, ''), 'base64').toString('utf-8');
+      if (decoded.includes('-----BEGIN')) {
+        return decoded;
+      }
+    } catch {
+      // Fallback to raw value
+    }
+    return cleaned;
   }
-  // Fall back to file (local dev)
   if (fs.existsSync(filePath)) {
     return fs.readFileSync(filePath, 'utf-8');
   }
@@ -33,11 +37,9 @@ function getCertContent(envVar: string, filePath: string): string | null {
 }
 
 export function isCertificatesAvailable(): boolean {
-  // Check env vars (Railway)
   if (process.env.PASS_PEM && process.env.PASS_KEY && process.env.WWDR_PEM) {
     return true;
   }
-  // Check local files
   const passPem = path.join(CERTS_DIR, 'pass.pem');
   const passKey = path.join(CERTS_DIR, 'pass.key');
   const wwdrPem = path.join(CERTS_DIR, 'wwdr.pem');
@@ -87,7 +89,6 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer): Promise<Pas
     fs.mkdirSync(CERTS_DIR, { recursive: true });
   }
 
-  // Get cert contents (from env vars or files)
   let passPemContent = getCertContent('PASS_PEM', path.join(CERTS_DIR, 'pass.pem'));
   const passKeyContent = getCertContent('PASS_KEY', path.join(CERTS_DIR, 'pass.key'));
   const wwdrPemContent = getCertContent('WWDR_PEM', path.join(CERTS_DIR, 'wwdr.pem'));
@@ -102,16 +103,15 @@ export async function signAndPackagePass(unsignedZipBuffer: Buffer): Promise<Pas
   const manifestContent = await manifestFile.async('nodebuffer');
   let signatureBuffer: Buffer | null = null;
 
-  // Sign if we have all three certs
   if (passPemContent && passKeyContent && wwdrPemContent) {
-    // 1. Try pure JavaScript PKCS7 signing first (pure JS, works everywhere)
+    // 1. Try pure JavaScript PKCS7 signing first
     try {
       signatureBuffer = createPkcs7SignatureNodeForge(manifestContent, passPemContent, passKeyContent, wwdrPemContent);
       console.log('✅ Pass signed successfully using pure JS (node-forge)');
     } catch (forgeErr) {
       console.warn('Pure JS signing failed, trying OpenSSL CLI fallback:', forgeErr);
 
-      // 2. Fallback to OpenSSL CLI if available
+      // 2. Fallback to OpenSSL CLI
       const opensslBin = fs.existsSync('C:\\Program Files\\Git\\usr\\bin\\openssl.exe')
         ? '"C:\\Program Files\\Git\\usr\\bin\\openssl.exe"'
         : 'openssl';

@@ -108,6 +108,15 @@ app.get('/api/pass/download/:filename', (req, res) => {
   res.send(item.zipBuffer);
 });
 
+// Global Process Error Handlers (Prevents Railway container crashes on invalid cert input)
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Uncaught Exception in server process:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Unhandled Promise Rejection in server process:', reason);
+});
+
 app.listen(Number(PORT), HOST, () => {
   console.log(`🚀 PassCraft Signing Server started on ${HOST}:${PORT}`);
   console.log(`📋 Cert status: ${isCertificatesAvailable() ? '✅ Certificates Present' : '⚠️ Certificates Missing'}`);
